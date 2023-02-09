@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<body>
+
+<canvas id="myCanvas" width="300" height="150" style="border:1px solid #d3d3d3;">
+Your browser does not support the HTML5 canvas tag.</canvas>
+
+<script>
+var c = document.getElementById("myCanvas");
+var ctx = c.getContext("2d");
+
+let ticks1 = 0; //katras taisnes radiālā punkta aprēķinam
+let ticks2 = 0;
+let ticks3 = 0;
+let ticks4 = 0;
+let ticksBackground = 0;
+var isCol1 = false; //lai noteiktu vai bijusi sadursme
+var isCol2 = false;
+var isCol3 = false;
+var isCol4 = false;
+
+const img = new Image();
+img.src = 'background.png';
+
+let speed1 = 0.01; //sākotnējais ātrums katrai līknei
+let speed2 = 0.02; //vienai atšķiras, citādi, sinhroni rotējot, sadursmju nav
+let speed3 = 0.01;
+let speed4 = 0.01;
+let speedBackground = 0.01;
+
+var imgData = ctx.getImageData(0, 0, 300, 150); //attēlotie dati
+var imgDataLine1 = ctx.getImageData(0, 0, 300, 150); //aprēķinātie dati sadursmju noteikšanai
+var imgDataLine2 = ctx.getImageData(0, 0, 300, 150);
+var imgDataLine3 = ctx.getImageData(0, 0, 300, 150);
+var imgDataLine4 = ctx.getImageData(0, 0, 300, 150);
+
+function putPixel(x, y, lineNum){
+    imgData.data[c.width * y * 4 + x * 4] = 186; //turpmākās trīs rindas ir viena un tā paša pikseļa krāsas RGB
+    imgData.data[c.width * y * 4 + x * 4 + 1] = 99; //krāsa G
+    imgData.data[c.width * y * 4 + x * 4 + 2] = 187; // krāsa B
+    if(lineNum == 1) imgDataLine1.data[c.width * y * 4 + x * 4 + 3] = 255; //ievieto katras taisnes koordinātas, lai noteiktu sadursmē iesaistītos
+    if(lineNum == 2) imgDataLine2.data[c.width * y * 4 + x * 4 + 3] = 255;
+    if(lineNum == 3) imgDataLine3.data[c.width * y * 4 + x * 4 + 3] = 255;
+    if(lineNum == 4) imgDataLine4.data[c.width * y * 4 + x * 4 + 3] = 255;
+    if(imgData.data[c.width * y * 4 + x * 4 + 3] == 255){ //ja jāzīmē vietā, kurā jau uzzīmēts, tātad notikusi sadursme
+        if(imgDataLine1.data[c.width * y * 4 + x * 4 + 3] == 255) isCol1 = true; //pārbauda visus sadursmē iesaistītos
+        if(imgDataLine2.data[c.width * y * 4 + x * 4 + 3] == 255) isCol2 = true;
+        if(imgDataLine3.data[c.width * y * 4 + x * 4 + 3] == 255) isCol3 = true;
+        if(imgDataLine4.data[c.width * y * 4 + x * 4 + 3] == 255) isCol4 = true;
+    }
+    imgData.data[c.width * y * 4 + x * 4 + 3] = 255; //padara redzamu pikseli
+    // console.log(x, y);
+}
+
+function plotLineLow(x0, y0, x1, y1, lineNum){
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const deltae = Math.abs(dy / dx);
+    let y = y0;
+    let e = 0;
+    for(let x = x0; x <= x1; x++){
+        putPixel(x, y, lineNum);
+        e = e + deltae;
+        if(e >= 0.5){
+            e = e - 1;
+            y = y + Math.sign(dy);
+        }
+    }
+}
+
+function plotLineHigh(x0, y0, x1, y1, lineNum){
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    const deltae = Math.abs(dx / dy); //iegūst vienmēr pozitīvu rezultātu
+    let x = x0;
+    let e = 0;
+    for(let y = y0; y <= y1; y++){
+        putPixel(x, y, lineNum);
+        e = e + deltae;
+        if(e >= 0.5){
+            e = e - 1;
+            x = x + Math.sign(dx); //ja ir pozitīvs vai negatīvs skaitlis, tad pieskaita 1 vai -1
+        }
+    }
+}
+
+function plotLine(x0, y0, x1, y1, lineNum){
+    if(Math.abs(y1 - y0) < Math.abs(x1 - x0)){
+        if (x0 > x1)
+            plotLineLow(x1, y1, x0, y0, lineNum);
+        else
+            plotLineLow(x0, y0, x1, y1, lineNum);
+    }
+    else {
+        if (y0 > y1)
+            plotLineHigh(x1, y1, x0, y0, lineNum)
+        else
+            plotLineHigh(x0, y0, x1, y1, lineNum);
+    } 
+}
+
+function update(){    
+    
+    imgData.data.fill(0); //reseto uzzīmētās līnijas
+    
+    imgDataLine1.data.fill(0); // reseto aprēķināto konkrēto līniju
+    let x = Math.floor(Math.cos(ticks1) * 50 + 50); //pikseļa atrašanās uz radiālās līnijas x asij
+    let y = Math.floor(Math.sin(ticks1) * 50 + 50); //pikseļa atrašanās uz radiālās līnijas y asij
+    plotLine(50, 50, x, y, 1); //izsauc funkciju līnijas zīmēšanai, nododot koordinātas un līnijas numuru
+
+    imgDataLine2.data.fill(0);
+    x = Math.floor(Math.cos(ticks2) * 50 + 100);
+    y = Math.floor(Math.sin(ticks2) * 50 + 75);
+    plotLine(100, 75, x, y, 2);
+
+    imgDataLine3.data.fill(0);
+    x = Math.floor(Math.cos(ticks3) * 50 + 150);
+    y = Math.floor(Math.sin(ticks3) * 50 + 30);
+    plotLine(150, 30, x, y, 3);
+
+    imgDataLine4.data.fill(0);
+    x = Math.floor(Math.cos(ticks4) * 50 + 200);
+    y = Math.floor(Math.sin(ticks4) * 50 + 60);
+    plotLine(200, 60, x, y, 4);
+
+    ctx.putImageData(imgData, 0, 0);
+    
+    ctx.beginPath();
+    ctx.moveTo(150, 150);
+    ctx.lineTo(Math.floor(Math.cos(ticksBackground) * 220 + 150), Math.floor(Math.sin(ticksBackground) * 220 + 150));
+    ctx.moveTo(150, 150);
+    ctx.lineTo(Math.floor(Math.cos(ticksBackground - 0.02) * 220 + 150), Math.floor(Math.sin(ticksBackground - 0.02) * 220 + 150));
+    ctx.strokeStyle = "#C8BFE7";
+    ctx.stroke();
+
+    ctx.drawImage(img, 0, 0);
+    ctx.globalCompositeOperation = "destination-over"; //bildi paliek apakšā visam
+    imgData = ctx.getImageData(0, 0, 300, 150);
+    
+    requestAnimationFrame(update); //gaidīšanas svētki
+    if(isCol1 == true){ //ja sadūries ar kādu, jāmaina virziens un ātrums jānomet uz 0.02
+        ticks1 = ticks1 - speed1 * 1.1; //atgriež iepriekšējā pozīcijā, lai nesastrēgst, ar 10% rezervi
+        speed1 = 0.02 * Math.sign(speed1) * -1; //nomet ātrumu, piešķir to pašu zīmi un pagriež pretējā virzienā
+    } 
+    if(isCol2 == true){
+        ticks2 = ticks2 - speed2 * 1.1;
+        speed2 = 0.02 * Math.sign(speed2) * -1;
+    } 
+    if(isCol3 == true){
+        ticks3 = ticks3 - speed3 * 1.1;
+        speed3 = 0.02 * Math.sign(speed3) * -1;
+    } 
+    if(isCol4 == true){
+        ticks4 = ticks4 - speed4 * 1.1;
+        speed4 = 0.02 * Math.sign(speed4) * -1;
+    }     
+    ticks1 = ticks1 + speed1; //pozīcijai piešķir jaunu vērtību, lai nodrošinātu rotāciju
+    ticks2 = ticks2 + speed2;
+    ticks3 = ticks3 + speed3;
+    ticks4 = ticks4 + speed4;
+    ticksBackground = ticksBackground + speedBackground;
+    isCol1 = false;
+    isCol2 = false;
+    isCol3 = false;
+    isCol4 = false;
+    speed1 = speed1 + 0.0001 * Math.sign(speed1); //audzē ātrumu
+    speed2 = speed2 + 0.0001 * Math.sign(speed2);
+    speed3 = speed3 + 0.0001 * Math.sign(speed3);
+    speed4 = speed4 + 0.0001 * Math.sign(speed4);
+}
+requestAnimationFrame(update);
+
+ctx.beginPath();
+ctx.moveTo(0, 0);
+ctx.lineTo(300, 150);
+ctx.stroke();
+
+function reverse(lineNum){
+    if(lineNum == 1) speed1 = speed1 * -1;
+    if(lineNum == 2) speed2 = speed2 * -1;
+    if(lineNum == 3) speed3 = speed3 * -1;
+    if(lineNum == 4) speed4 = speed4 * -1;
+}
+
+</script>
+<br>
+<button width = "200" onclick="reverse(1)">Click me</button>
+<button onclick="reverse(2)">Click me</button>
+<button onclick="reverse(3)">Click me</button>
+<button onclick="reverse(4)">Click me</button>
+
+</body>
+</html>
